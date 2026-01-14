@@ -22,19 +22,17 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: '画像データが必要です' });
     }
 
-    const apiKey = process.env.OPENROUTER_API_KEY;
+    const apiKey = process.env.OPENAI_API_KEY;
 
-    // OpenRouter APIを呼び出し（無料のVisionモデル使用）
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    // OpenAI APIを呼び出し（GPT-4o-miniモデル使用）
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://cat-health-checker.vercel.app',
-        'X-Title': 'Cat Health Checker'
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'meta-llama/llama-3.2-11b-vision-instruct:free',
+        model: 'gpt-4o-mini',
         messages: [{
           role: 'user',
           content: [
@@ -65,14 +63,15 @@ export default async function handler(req, res) {
               }
             }
           ]
-        }]
+        }],
+        max_tokens: 1000
       })
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      console.error('OpenRouter API Error:', errorData);
-      throw new Error(errorData.error?.message || 'OpenRouter APIエラー');
+      console.error('OpenAI API Error:', errorData);
+      throw new Error(errorData.error?.message || 'OpenAI APIエラー');
     }
 
     const data = await response.json();
