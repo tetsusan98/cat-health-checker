@@ -22,30 +22,17 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: '画像データが必要です' });
     }
 
-    // Claude APIを呼び出し
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    // Google Gemini APIを呼び出し
+    const apiKey = process.env.GEMINI_API_KEY;
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': process.env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        messages: [{
-          role: 'user',
-          content: [
+        contents: [{
+          parts: [
             {
-              type: 'image',
-              source: {
-                type: 'base64',
-                media_type: 'image/jpeg',
-                data: image
-              }
-            },
-            {
-              type: 'text',
               text: `この猫の画像から、以下の観点で健康状態を分析してください。必ず以下のJSON形式のみで回答してください。マークダウンのコードブロックは使わず、JSONオブジェクトだけを返してください:
 
 {
@@ -63,6 +50,12 @@ export default async function handler(req, res) {
   },
   "recommendations": "飼い主へのアドバイス"
 }`
+            },
+            {
+              inline_data: {
+                mime_type: "image/jpeg",
+                data: image
+              }
             }
           ]
         }]
@@ -71,11 +64,36 @@ export default async function handler(req, res) {
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.error?.message || 'Claude APIエラー');
+      throw new Error(errorData.error?.message || 'Gemini APIエラー');
     }
 
     const data = await response.json();
-    res.status(200).json(data);
+    
+    // Geminiのレスポンス形式からテキストを抽出
+    const textContent = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!textContent) {
+      throw new Error('応答が取得できませんでした');
+    }
+
+    // マークダウンのコードブロック記法を除去
+    let jsonText = textContent.trim();
+    jsonText = jsonText.replace(/^```json\s*/i, '');
+    jsonText = jsonText.replace(/^```\s*/i, '');
+    jsonText = jsonText.replace(/\s*```$/i, '');
+    jsonText = jsonText.trim();
+
+    // JSONをパースして検証
+    const parsedData = JSON.parse(jsonText);
+
+    // Claude API形式に変換（フロントエンドのコードを変更しないため）
+    const claudeFormat = {
+      content: [{
+        type: 'text',
+        text: JSON.stringify(parsedData)
+      }]
+    };
+
+    res.status(200).json(claudeFormat);
   } catch (error) {
     console.error('Error:', error);
     res.status(500).json({ error: error.message });
