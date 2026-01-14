@@ -22,9 +22,9 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: '画像データが必要です' });
     }
 
-    // Google Gemini APIを呼び出し
+    // Google Gemini APIを呼び出し（正しいエンドポイント）
     const apiKey = process.env.GEMINI_API_KEY;
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -64,6 +64,7 @@ export default async function handler(req, res) {
 
     if (!response.ok) {
       const errorData = await response.json();
+      console.error('Gemini API Error:', errorData);
       throw new Error(errorData.error?.message || 'Gemini APIエラー');
     }
 
