@@ -22,9 +22,9 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: '画像データが必要です' });
     }
 
-    // Google Gemini APIを呼び出し（正しいエンドポイント）
+    // Google Gemini APIを呼び出し（gemini-proモデル使用）
     const apiKey = process.env.GEMINI_API_KEY;
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`, {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-vision:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -65,7 +65,7 @@ export default async function handler(req, res) {
     if (!response.ok) {
       const errorData = await response.json();
       console.error('Gemini API Error:', errorData);
-      throw new Error(errorData.error?.message || 'Gemini APIエラー');
+      throw new Error(JSON.stringify(errorData));
     }
 
     const data = await response.json();
@@ -73,6 +73,7 @@ export default async function handler(req, res) {
     // Geminiのレスポンス形式からテキストを抽出
     const textContent = data.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!textContent) {
+      console.error('No text content in response:', JSON.stringify(data));
       throw new Error('応答が取得できませんでした');
     }
 
